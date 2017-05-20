@@ -10,6 +10,10 @@ output:
 ---
 
 ```{r message = FALSE}
+suppressMessages(
+  install.packages("maps", repos = "https://cloud.r-project.org")
+)
+
 library(rvest)   # for web scraping
 library(dplyr)   # for data manipulation
 library(stringr) # for string manipulation
@@ -65,18 +69,18 @@ hotel_pages = links %>%
 Now we can put the name and hotel page information together in a *tibble*.
 
 ```{r hotels-tibble}
-hotels <- data_frame(
+hotels = data_frame(
   name = hotel_names,
   url = paste0(base_url, hotel_pages)
-  )
+)
 ```
 
 Lastly, we remove rows that do not actually contain hotel information. (Note that we also limit the size of the data due to slow internet at the USCOTS hotel, but if you are running this elsewhere you can work with a larger or the entire dataset.)
 
 ```{r}
-hotels <- hotels %>%
+hotels = hotels %>%
   filter(!is.na(hotel_pages), (hotel_pages != "#")) %>%
-  slice(1:10) # due to slow internet at the hotel
+  slice(1:100)
 ```
 
 Let's take a peek at the data:
@@ -85,9 +89,6 @@ Let's take a peek at the data:
 head(hotels)
 ```
 
-```{r}
-
-```
 
 ## Get hotel latitude and longitude
 
@@ -119,19 +120,14 @@ hotel_lat_long = map_df(hotels$url, get_hotel_details)
 hotels = cbind(hotels, hotel_lat_long)
 ```
 
-```{r lv-viz, eval=FALSE}
+```{r lv-viz, message=FALSE}
 world = map_data("world")
 world = world[world$region != "Antarctica",]
-ggplot(data=world, map=world, aes(map_id=region)) +
-  geom_map(, color="white", fill="grey") +
-  geom_point(data=hotels, aes(x=longitude, y=latitude)) +
+ggplot() +
+  geom_map(data=world, map=world, aes(map_id=region), 
+           color="white", fill="grey") +
+  geom_point(data=hotels, aes(x=longitude, y=latitude), alpha=0.75) +
   theme_bw()
-```
-
-# Get Denny's locations
-
-```{r}
-dennys <- read_csv("data/dennys.csv")
 ```
 
 
