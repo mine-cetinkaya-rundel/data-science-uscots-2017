@@ -1,5 +1,5 @@
 ---
-title: "La Quinta is Spanish for `next to Denny’s`"
+title: "La Quinta is Spanish for next to Denny’s"
 author: "Mine Cetinkaya-Rundel"
 date: "5/19/2017"
 output:
@@ -10,10 +10,6 @@ output:
 ---
 
 ```{r message = FALSE}
-suppressMessages(
-  install.packages("maps", repos = "https://cloud.r-project.org")
-)
-
 library(rvest)   # for web scraping
 library(dplyr)   # for data manipulation
 library(stringr) # for string manipulation
@@ -28,7 +24,7 @@ Our goal is to create a dataset where each row represents a La Quinta hotel, and
 
 La Quinta hotels are listed at http://www.lq.com/en/findandbook/hotel-listings.html. We want to grab the names of the hotels from this page.
 
-**Strongly recommended:** Use a Chrome browser with the (Selector Gadget)[http://selectorgadget.com/] extension installed.
+**Strongly recommended:** Use a Chrome browser with the [Selector Gadget](http://selectorgadget.com/) extension installed.
 
 We will use the *rvest* package for this task. This package also loads the *xml2* package, from which we will use the `read_html` function to read the hotel listing page into R.
 
@@ -40,7 +36,7 @@ Then, from the rvest package, we will use the following functions from this pack
 
 ## Get hotel names
 
-We have a cached version of the La Quinta Find and Book page at http://www2.stat.duke.edu/~cr173/lq/www.lq.com/en/findandbook/. We will actually scrape the data from here since La Quinta limits the number of requests you can make to their pages in a given time period.
+We have a cached version of the La Quinta Find and Book page at http://www2.stat.duke.edu/~cr173/lq/www.lq.com/en/findandbook/hotel-listings.html. We will actually scrape the data from here since La Quinta limits the number of requests you can make to their pages in a given time period.
 
 ```{r save-url}
 base_url = "http://www2.stat.duke.edu/~cr173/lq/www.lq.com/en/findandbook/"
@@ -80,15 +76,8 @@ Lastly, we remove rows that do not actually contain hotel information. (Note tha
 ```{r}
 hotels = hotels %>%
   filter(!is.na(hotel_pages), (hotel_pages != "#")) %>%
-  slice(1:100)
+  slice(1:100) # due to slow internet at USCOTS hotel
 ```
-
-Let's take a peek at the data:
-
-```{r}
-head(hotels)
-```
-
 
 ## Get hotel latitude and longitude
 
@@ -124,14 +113,16 @@ hotels = cbind(hotels, hotel_lat_long)
 world = map_data("world")
 world = world[world$region != "Antarctica",]
 ggplot() +
-  geom_map(data=world, map=world, aes(map_id=region), 
-           color="white", fill="grey") +
-  geom_point(data=hotels, aes(x=longitude, y=latitude), alpha=0.75) +
+  geom_map(data = world, map = world, aes(map_id = region), 
+           color = "white", fill = "grey") +
+  geom_point(data = hotels, aes(x = longitude, y = latitude), alpha = 0.75) +
   theme_bw()
 ```
 
 
 # Further reading
 
+See the resources below for how to move forward with this activity.
+
+- C Rundel and M Çetinkaya-Rundel. Taking a Chance in the Classroom: [La Quinta is Spanish for “Next to Denny's”](https://github.com/mine-cetinkaya-rundel/data-science-uscots-2017/blob/master/02-breakout/chance_laquinta_dennys.pdf) Dalene Stangl and Mine Çetinkaya-Rundel Column Editors." CHANCE 29.2 (2016): 53-57.
 - J Reiser. (2014, Jan 30). new jersey geographer: Mitch Hedberg and GIS. Retrieved from http://njgeo.org/2014/01/30/mitch-hedberg-and-gis/.
-- C Rundel and M Çetinkaya-Rundel. "Taking a Chance in the Classroom: La Quinta is Spanish for “Next to Denny's” Dalene Stangl and Mine Çetinkaya-Rundel Column Editors." CHANCE 29.2 (2016): 53-57.
