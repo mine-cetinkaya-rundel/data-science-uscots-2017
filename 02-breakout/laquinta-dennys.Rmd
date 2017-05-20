@@ -1,0 +1,141 @@
+---
+title: "La Quinta is Spanish for `next to Denny’s`"
+author: "Mine Cetinkaya-Rundel"
+date: "5/19/2017"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r message = FALSE}
+library(rvest)   # for web scraping
+library(dplyr)   # for data manipulation
+library(stringr) # for string manipulation
+library(purrr)   # for functional programming
+library(ggplot2) # for data visualization
+library(readr)   # for CSV import/export
+```
+
+# Get La Quinta locations
+
+Our goal is to create a dataset where each row represents a La Quinta hotel, and for each hotel we record the following three variables: hotel name, latitude, longitude.
+
+La Quinta hotels are listed at http://www.lq.com/en/findandbook/hotel-listings.html. We want to grab the names of the hotels from this page.
+
+**Strongly recommended:** Use a Chrome browser with the (Selector Gadget)[http://selectorgadget.com/] extension installed.
+
+We will use the *rvest* package for this task. This package also loads the *xml2* package, from which we will use the `read_html` function to read the hotel listing page into R.
+
+Then, from the rvest package, we will use the following functions from this package:
+
+- `html_nodes`: Extract pieces out of HTML documents using XPath and css selector
+- `html_attr`: Extract attributes from html.
+- `html_text`: Extract text from html.
+
+## Get hotel names
+
+We have a cached version of the La Quinta Find and Book page at http://www2.stat.duke.edu/~cr173/lq/www.lq.com/en/findandbook/. We will actually scrape the data from here since La Quinta limits the number of requests you can make to their pages in a given time period.
+
+```{r save-url}
+base_url = "http://www2.stat.duke.edu/~cr173/lq/www.lq.com/en/findandbook/"
+url = paste0(base_url, "hotel-listings.html")
+```
+
+Then, we read this page into R.
+
+```{r read-page}
+page = read_html(url)
+```
+
+Then, using rvest we *harvest* the data we're interested in. Note that we can use the Selector Gadget to discover that the data we need is in the `#hotelListing .col-sm-12 a` node.
+
+```{r scrape}
+links = page %>% 
+  html_nodes("#hotelListing .col-sm-12 a")
+
+hotel_names = links %>% 
+  html_text()
+
+hotel_pages = links %>% 
+  html_attr("href")
+```
+
+Now we can put the name and hotel page information together in a *tibble*.
+
+```{r hotels-tibble}
+hotels <- data_frame(
+  name = hotel_names,
+  url = paste0(base_url, hotel_pages)
+  )
+```
+
+Lastly, we remove rows that do not actually contain hotel information. (Note that we also limit the size of the data due to slow internet at the USCOTS hotel, but if you are running this elsewhere you can work with a larger or the entire dataset.)
+
+```{r}
+hotels <- hotels %>%
+  filter(!is.na(hotel_pages), (hotel_pages != "#")) %>%
+  slice(1:10) # due to slow internet at the hotel
+```
+
+Let's take a peek at the data:
+
+```{r}
+head(hotels)
+```
+
+```{r}
+
+```
+
+## Get hotel latitude and longitude
+
+**Exercise:** Browse the hotel pages and, with your neighbor, come up with a proposed approach for extracting the hotel latitude and longitude information. Note that you do not need to implement this in R (or know how to), just come up with a proposed plan that seems realistic to you.
+
+Here is a sample helper function that can help with this task. Take a peek once you're done with the above exercise.
+
+```{r get-lat-lon}
+get_hotel_details = function(hotel_url){
+  map = read_html(hotel_url) %>%
+    html_nodes(".ppMap img") %>%
+    html_attr("src")
+  
+  lat_long = str_match(map, "\\|(-?[0-9]+\\.[0-9]+),(-?[0-9]+\\.[0-9]+)")
+
+  lat_long = data_frame(
+    latitude = as.numeric(lat_long[,2]),
+    longitude = as.numeric(lat_long[,3])
+    )
+
+}
+
+hotel_lat_long = map_df(hotels$url, get_hotel_details)
+```
+
+## Put all La Quinta information together
+
+```{r combine}
+hotels = cbind(hotels, hotel_lat_long)
+```
+
+```{r lv-viz, eval=FALSE}
+world = map_data("world")
+world = world[world$region != "Antarctica",]
+ggplot(data=world, map=world, aes(map_id=region)) +
+  geom_map(, color="white", fill="grey") +
+  geom_point(data=hotels, aes(x=longitude, y=latitude)) +
+  theme_bw()
+```
+
+# Get Denny's locations
+
+```{r}
+dennys <- read_csv("data/dennys.csv")
+```
+
+
+# Further reading
+
+- J Reiser. (2014, Jan 30). new jersey geographer: Mitch Hedberg and GIS. Retrieved from http://njgeo.org/2014/01/30/mitch-hedberg-and-gis/.
+- C Rundel and M Çetinkaya-Rundel. "Taking a Chance in the Classroom: La Quinta is Spanish for “Next to Denny's” Dalene Stangl and Mine Çetinkaya-Rundel Column Editors." CHANCE 29.2 (2016): 53-57.
